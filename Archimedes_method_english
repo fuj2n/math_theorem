@@ -1,0 +1,171 @@
+import pygame  # Required for the graphical interface
+import math  # Required for mathematical functions
+
+# Archimedes' method relies on drawing inscribed and circumscribed polygons within a circle to estimate pi within upper and lower bounds. As the number of sides increases, the polygon's perimeter gets closer to the circle's perimeter, providing a more accurate estimate of pi. 
+# The circumference of the circle is 2 pi, so when the polygon's perimeter gets close to the circle's perimeter, half of the polygon's perimeter is close to the value of pi.
+pygame.init()  # Initializes the graphical interface
+
+# Color definitions RGBA - Red - Green - Blue - A transparency, with 255 being dominant and 0 being transparent
+white = (255, 255, 255)
+white_transparent = (255, 255, 255, 180)
+blue_transparent = (0, 0, 255, 1)
+red_transparent = (255, 0, 0, 70)
+red = (255, 0, 0)
+blue = (0, 0, 255)
+pi = math.pi
+# Square drawing was necessary but is now unused
+square_side = math.sqrt(20000)
+
+# Needed for displaying the window
+width_of_window = 1200  # Length of the window along the x-axis
+height_of_window = 700  # Length of the window along the y-axis, but the y-axis increases as you go down, there's an inversion
+screen = pygame.display.set_mode((width_of_window, height_of_window))  # Converts variables into the screen
+layer1 = pygame.Surface((width_of_window, height_of_window), pygame.SRCALPHA)  # Creates an extra layer on the screen for transparency
+clock = pygame.time.Clock()  # Limits the FPS and adjusts the program speed
+running = True  # The status of the program
+radius = 200  # Radius of the circle
+center = (600, 350)  # Center of the circle and the screen
+area = 0  # Area variable initialized as a number
+circle_area = 0
+polygon_perimeter = 0
+vertical_side = 0
+horizontal_side = 0
+circle_perimeter = 2 * pi * radius
+
+show = True
+font = pygame.font.Font(None, 28)
+
+def area_check():
+    global area
+    global show
+    if area > 0:
+        show = True
+    else:
+        show = False
+
+def round_value(number):
+    return round(number, 2)
+
+def actual_circle_area(radius):
+    global circle_area
+    circle_area = math.pi * radius * radius
+
+def area_formula(n):  # Sine area formula
+    global area
+    # The area of a polygon with n sides: (n * r^2 * sin(2*pi/n)) / 2, I got this from AI, it needs to be calculated in radians.
+    area = (n * radius * radius * math.sin(2 * math.pi / n)) / 2
+
+def draw_circle(a):  # Draw circle
+    pygame.draw.circle(layer1, white_transparent, (600, 350), a, 1)  # Screen, color, center, radius, thickness
+    
+def draw_radius(b):  # Draw radius
+    pygame.draw.line(layer1, blue_transparent, (600, 350), (600 + b, 350), 1)
+
+def draw_square(c=False):  # I wrote this for testing myself
+    pygame.draw.rect(
+        layer1,
+        red_transparent,
+        pygame.Rect((400 + (200 - square_side)), (150 + (200 - square_side)), 2 * square_side, 2 * square_side), width=1
+    )
+    if c == True:  # Diagonal option
+        pygame.draw.line(
+            layer1,
+            (0, 255, 0, 1),
+            (400 + (200 - square_side), (150 + (200 - square_side))),
+            ((600 + square_side), (350 + square_side)),
+            1)
+
+def draw_polygon(n):  # Polygon drawing formula and implementation where n is the number of sides
+    corners = []  # In pygame, we provide the coordinates of the points, and it connects them. We store them here for convenience.
+    for i in range(n):  # From 0 to n-1, this helps us find the coordinates of the points
+        angle = 2 * math.pi * i / n  # To find the point, we need the sine and cosine of the angle. This logic comes from the relation between the opposite side and sine.
+        x = center[0] + (math.cos(angle) * radius)  # Finding the x-coordinate of the point
+        y = center[1] + (math.sin(angle) * radius)  # Finding the y-coordinate of the point
+        corners.append((x, y))  # Adding the corner points to the list for easier drawing
+    pygame.draw.polygon(layer1, red, corners, 3)  # Draw the polygon once on the screen (screen, color, corners, thickness)
+    
+    global polygon_perimeter
+    global vertical_side
+    global horizontal_side
+    global length
+    global pi_polygon
+    vertical_side = corners[0][1] - corners[1][1]
+    horizontal_side = corners[0][0] - corners[1][0]
+    length = math.sqrt(vertical_side * vertical_side + horizontal_side * horizontal_side)
+    polygon_perimeter = n * length
+    pi_polygon = polygon_perimeter / (2 * radius)
+
+def user_input():
+    pass
+
+button_color = (255, 255, 255)
+n = 3  # Starting with 3 as I will draw multiple polygons on the screen
+
+while running:  # Program continuously running during this loop
+    for event in pygame.event.get():  # Extracting events that occur in the software
+        if event.type == pygame.QUIT:  # If the event type is 'quit', the software and window are closed
+            running = False  # The program stops
+        elif event.type == pygame.KEYDOWN:
+            if event.key != pygame.K_BACKSPACE:
+                n += 1
+            elif event.key == pygame.K_BACKSPACE:
+                n -= 1
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            if button.collidepoint(event.pos):
+                if not clicked:
+                    n += 1  # Increase 'n' value every time the button is clicked
+                    clicked = True  # Mark the button as clicked
+            elif not button.collidepoint(event.pos):  
+                clicked = False
+
+    keys = pygame.key.get_pressed()
+
+    screen.fill((0, 0, 0))
+    layer1.fill((0, 0, 0, 0))  # Transfer the second layer to the window
+    button = pygame.draw.rect(screen, button_color, (1050, 640, 100, 40), 1)
+    if 0 < n < 50:
+        clock.tick(4)  # Sets the speed of the software to 4 FPS
+    elif 10 < n < 50:
+        clock.tick(10)
+    elif 50 < n < 100:
+        clock.tick(20)
+    elif circle_area == area:
+        clock.tick(0)
+    elif 1000 < n < 2000:
+        clock.tick(50)
+    elif 2000 < n < 10000:
+        clock.tick(100)
+    else:
+        clock.tick(500)
+
+    actual_circle_area(radius)
+    draw_circle(radius)  # Calls the function to draw a circle with the given radius
+    draw_polygon(n)  # Draws the polygon starting from 3 sides, continuously drawing more polygons
+    area_formula(n)
+    area_check()
+    pygame.draw.circle(screen, red, (center), 1, 1)
+    if show == True:
+        text = font.render(f"Polygon area: {round_value(area):.2f}", False, white_transparent)
+    else:
+        pass
+    text2 = font.render(f"Circle area: {round_value(circle_area)}", False, white_transparent)
+    text3 = font.render(f"Circle Pi: {math.pi}", False, white_transparent)
+    text4 = font.render(f"Polygon Pi: {pi_polygon}", False, white_transparent)
+    polygon_text = font.render(f"Number of sides: {n}", False, white_transparent)
+
+    # Uncomment to limit the number of sides for polygons
+    """
+    if area < circle_area():  # Limits the number of sides of the polygons
+        n += 1  # Increases the number of sides incrementally
+    elif area == circle_area:  # Resets the drawing and shows from a different angle
+        n = 3
+    """
+
+    screen.blit(layer1, (0, 0))  # Updates the second layer
+    screen.blit(text, (20, 50))
+    screen.blit(text2, (20, 20))
+    screen.blit(text3, (850, 20))
+    screen.blit(text4, (850, 50))
+    screen.blit(polygon_text, (20, 80))
+    pygame.display.flip()  # Updates the main screen
+pygame.quit()  # Closes the window automatically when the program ends
