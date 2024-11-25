@@ -1,0 +1,158 @@
+import pygame #grafik arayüzü için lazım
+import math #matematik fonksiyonları için lazım
+
+#Arşimet’in yöntemi, daireye iç ve dış çokgenler çizerek alt ve üst sınırlar arasında bir pi değeri tahminine dayanır. Kenar sayısı
+#arttıkça çokgenin çevresi dairenin çevresine daha da yakınsar, bu da pi'ye daha doğru bir tahmin sağlar
+#dairenin çevresi 2 pi dir bundan çokgenin çevresi en sonda dairenin çevresine çok yakınlaşıyor ise çokgenin çevresinin yarısı pi ye yakın bir değerdir.
+pygame.init() #grafik arayüzü başlatmak için
+
+#renk tanımlamaları RGBA -Red -Green -Blue -A saydamlık , 255 baskın 0 çekinik aralığında
+beyaz = (255, 255, 255)
+beyaz_seffaf = (255, 255, 255, 180)
+mavi_seffaf = (0, 0, 255, 1)
+kirmizi_seffaf = (255,0,0,70)
+kirmizi = (255,0,0)
+mavi = (0,0,255)
+pi = math.pi
+#kare çizimi için gerekliydi şuanda gereksiz
+kare_kenar = math.sqrt(20000)
+
+#ekran görüntüsü için lazım
+width_of_window = 1200 #ekranın x eksenindeki uzunluğu
+height_of_window = 700 #ekranın y eksenindeki uzunluğu fakat y ekseni aşağı gittikçe artıyor terslik var
+ekran = pygame.display.set_mode((width_of_window, height_of_window)) #değişkenleri ekrana dönüştürüyor
+katman1 = pygame.Surface((width_of_window, height_of_window), pygame.SRCALPHA) #ekranın üzerinde ekstra katman oluşturuyoruz saydamlık için
+saat = pygame.time.Clock() #fps sınırı belirleyip programın hızını ayarlamaya yarıyor
+running = True #programın çalışma durumu
+yaricap = 200 #dairenin yarı çapı
+merkez = (600,350) #dairenin ve ekranın merkezi
+alan = 0 #alan değişkeni sayı olarak atandı
+daire_alan = 0
+cokgen_cevre = 0
+dik_kenar = 0
+yatay_kenar = 0
+daire_cevre = 2 * pi * yaricap
+
+goster = True
+font = pygame.font.Font(None, 28)
+def alan_kontrol():
+    global alan
+    global goster
+    if alan > 0:
+        goster = True
+    else:
+        goster = False
+def yuvarla(sayi):
+    return round(sayi, 2)
+def gercek_daire_alan(yaricap):
+    global daire_alan
+    daire_alan = math.pi * yaricap * yaricap
+def alan_formul(n): #sinüs alan formülü
+    global alan
+    # n kenarlı çokgenin alanı: (n * r^2 * sin(2*pi/n)) / 2 not burayı ai'dan aldım direkt radiant  olarak hesaplamak lazımmış.
+    alan = (n * yaricap * yaricap * math.sin(2 * math.pi / n)) / 2
+def daire_ciz(a): #daire çizimi
+    pygame.draw.circle(katman1,beyaz_seffaf,(600,350),a,1) #ekran,renk,merkez,yarıçap,kalınlık şeklinde yazılıyor
+    
+def yaricap_ciz(b): #yarıçap çizimi
+    pygame.draw.line(katman1,mavi_seffaf,(600,350),(600+b,350),1)
+
+def kare_ciz(c=False): #kare çizimi kendimi test etmek için yazdım
+    pygame.draw.rect(
+        katman1,
+        kirmizi_seffaf,
+        pygame.Rect((400+(200-kare_kenar)),(150+(200-kare_kenar)),2*kare_kenar,2*kare_kenar),width=1
+    )
+    if c == True: #köşegen isteği
+        pygame.draw.line(
+            katman1,
+            (0,255,0,1),
+            (400+(200-kare_kenar),(150+(200-kare_kenar))),
+            ((600+kare_kenar),(350+kare_kenar)),
+            1)
+def cokgen_ciz(n): #bütün olayın döndüğü çokgen çizme formülü ve yazılımı n burada kenar sayımız
+    koseler = [] #pygame de biz noktaların kordinatını veriyoruz o ise onları birleştiriyor burada noktaları bunun içine koyuyoruz şuanda boş
+    for i in range(n): #0dan başlayıp n-1'e kadar bize noktalarımızı bulmamızı yarıyor
+        aci = 2 * math.pi * i / n #noktayı bulmak için bize açının sinüsü ve kosinüsü gerekli bunun mantığı karşı hipo eşittir sinüsten geliyor karşıyı bulmak için hipo ile sinüsü çarpıyoruz
+        x = merkez[0]+(math.cos(aci)*yaricap) #noktanın x eksenini buluyoruz
+        y = merkez[1]+(math.sin(aci)*yaricap) #noktanın y eksenini buluyoruz
+        koseler.append((x,y)) #köşeleri yazdığımız listeye ekliyoruz ki ekrana çizdirmesi kolay olsun
+    pygame.draw.polygon(katman1,kirmizi,koseler,3) #burada bir kereliğine ekrana çokgeni yazdırıyor (ekran,renk,köşeler,kalınlık)
+    
+    global cokgen_cevre
+    global dik_kenar
+    global yatay_kenar
+    global uzunluk
+    global pi_cokgen
+    dik_kenar = koseler[0][1] - koseler[1][1]
+    yatay_kenar = koseler[0][0] - koseler[1][0]
+    uzunluk = math.sqrt(dik_kenar*dik_kenar + yatay_kenar*yatay_kenar)
+    cokgen_cevre = n * uzunluk
+    pi_cokgen = cokgen_cevre / (2 *yaricap)     
+def kullanici_giris():
+    pass
+dugme_renk = (255,255,255)
+n = 3 #ekrana birden fazla çokgen çizdirceğim için 3'ten başlatıyorum n'i
+while running: #program çalışırken durmadan dönen yazılım anlık değişimlere yarıyor
+    for event in pygame.event.get(): #yazılımdagerçekleşen olayları türüne göre ayıklıyor
+        if event.type == pygame.QUIT: #türü çıkma isteği ise yazılımı ve pencereyi kapatıyor
+            running = False #yazılım durdu demek
+        elif event.type == pygame.KEYDOWN:
+            if event.key != pygame.K_BACKSPACE:
+                n += 1
+            elif event.key == pygame.K_BACKSPACE:
+                n -= 1
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            if dugme.collidepoint(event.pos):
+                if not basildi:
+                    n += 1  # Düğmeye her basıldığında 'n' değerini arttır
+                    basildi = True  # Düğme tıklanmış olarak işaretlendi
+            elif not dugme.collidepoint(event.pos):  
+                basildi = False
+    keys = pygame.key.get_pressed()
+    
+    ekran.fill((0,0,0))
+    katman1.fill((0, 0, 0, 0)) #ikinci ekranı pencereye geçiriyor
+    dugme = pygame.draw.rect(ekran,dugme_renk,(1050,640,100,40),1)
+    if 0 < n < 50:
+        saat.tick(4) #buradaki 5 yazılımın işleme hızı
+    elif 10 < n < 50:
+        saat.tick(10)
+    elif 50 < n < 100:
+        saat.tick(20)
+    elif daire_alan == alan:
+        saat.tick(0)
+    elif 1000 < n < 2000:
+        saat.tick(50)
+    elif 2000< n < 10000:
+        saat.tick(100)
+    else:
+        saat.tick(500)
+    gercek_daire_alan(yaricap)
+    daire_ciz(yaricap) #fonksiyonu çağırıp ekrana yaricapi olan daire çiziyoruz
+    cokgen_ciz(n) #normalde tek seferlik çokgen çizme komudunu 3 ten başlıcak şekilde ekrana yazıyor fakat while running döngüsünde olduğu için durmadan farklı çokgen daha ekrana yazıyor
+    alan_formul(n)
+    alan_kontrol()
+    pygame.draw.circle(ekran,kirmizi,(merkez),1,1)
+    if goster == True:
+        metin = font.render(f"Çokgen alanı : {yuvarla(alan):.2f}", False, beyaz_seffaf)
+    else:
+        pass
+    metin2 = font.render(f"Dairenin alanı : {yuvarla(daire_alan)}",False,beyaz_seffaf)
+    metin3 = font.render(f"Daire Pi : {math.pi}",False,beyaz_seffaf)
+    metin4 = font.render(f"Çokgen Pi : {pi_cokgen}",False,beyaz_seffaf)
+    cokgen_metin = font.render(f"Kenar sayısı : {n}",False,beyaz_seffaf)
+    """"
+    if alan < daire_alan(): #çokgenlerin kaç kenara kadar yazılacağını sınırlıyor
+        n += 1 #kaçarlı artacağını belirliyor
+    elif alan == daire_alan: #çizme işlemini sıfırlayıp tekrar farklı açıdan gösteriyor
+        n = 3
+    """
+    ekran.blit(katman1,(0,0)) #ikinci ekranı güncelliyor
+    ekran.blit(metin,(20,50))
+    ekran.blit(metin2,(20,20))
+    ekran.blit(metin3,(850,20))
+    ekran.blit(metin4,(850,50))
+    ekran.blit(cokgen_metin,(20,80))
+    pygame.display.flip() #ana ekranımızı güncelliyor
+pygame.quit() #eğer while Running yani ana yazılımımız durarsa pencereyi otomatik kapatıyor
