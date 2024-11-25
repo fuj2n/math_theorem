@@ -14,4 +14,3 @@ We are drawing polygons inside a circle, and as we increase the number of sides,
 im using python and pygame and math library for that.Pygame allows me to draw lines , polygon , circle etc... Math allows me for 
 creating equation and using that on pygame.
 
-im just keep learning 
