@@ -1,0 +1,205 @@
+import pygame
+import math
+
+pygame.init()
+
+# Renkler (RGBA)
+beyaz = (255, 255, 255)
+beyaz_seffaf = (255, 255, 255, 180)
+kirmizi = (255, 0, 0)
+siyah = (0, 0, 0)
+yesil = (0, 255, 0)
+pi = math.pi
+
+width_of_window = 1200
+height_of_window = 700
+ekran = pygame.display.set_mode((width_of_window, height_of_window))
+katman1 = pygame.Surface((width_of_window, height_of_window), pygame.SRCALPHA)
+saat = pygame.time.Clock()
+
+base_yaricap = 200
+
+# Çokgenin merkez ekranın merkezinde sabit kalacak yer değil,
+# zoom yapılınca bir köşeye odaklanacak,
+# böylece köşeye yakınlaştırılmış izlenimi olacak.
+
+n = 3  
+input_active = False
+input_text = ''
+durum_aktifi = False
+goster = False
+
+input_rect = pygame.Rect(920, 630, 100, 40)
+button_rect = pygame.Rect(1050, 630, 100, 40)
+
+zoom = 1.0
+zoom_min = 0.5
+zoom_max = 5.0
+zoom_step = 0.1
+
+offset_x = 0
+offset_y = 0
+
+def alan_kontrol(alan):
+    return alan > 0
+
+def yuvarla(sayi):
+    return round(sayi, 2)
+
+def alan_formul(n_kenar, yaricap_zoom):
+    return (n_kenar * yaricap_zoom * yaricap_zoom * math.sin(2 * math.pi / n_kenar)) / 2
+
+def gercek_daire_alan(yaricap_zoom):
+    return math.pi * yaricap_zoom * yaricap_zoom
+
+def cokgen_koseler(n_kenar, yaricap_zoom):
+    koseler = []
+    for i in range(n_kenar):
+        aci = 2 * math.pi * i / n_kenar
+        x = math.cos(aci) * yaricap_zoom
+        y = math.sin(aci) * yaricap_zoom
+        koseler.append((x, y))
+    return koseler
+
+def draw_shapes(n_kenar, yaricap_zoom, offset_x, offset_y, goster, alan, daire_alan, pi_cokgen):
+    katman1.fill((0, 0, 0, 0))
+
+    # Daire çiz, merkez offsetlenmiş
+    merkez_x = width_of_window // 2 + offset_x
+    merkez_y = height_of_window // 2 + offset_y
+
+    pygame.draw.circle(katman1, beyaz_seffaf, (merkez_x, merkez_y), int(yaricap_zoom), 1)
+
+    # Çokgen köşeleri, offsetlenmiş ve ekran merkezine göre kaydırılmış
+    koseler = cokgen_koseler(n_kenar, yaricap_zoom)
+    ekran_koseler = []
+    for x, y in koseler:
+        ekran_x = int(merkez_x + x)
+        ekran_y = int(merkez_y + y)
+        ekran_koseler.append((ekran_x, ekran_y))
+
+    pygame.draw.polygon(katman1, kirmizi, ekran_koseler, 3)
+
+    # Merkez noktası (dairenin merkezini ortala)
+    pygame.draw.circle(katman1, kirmizi, (merkez_x, merkez_y), 3)
+
+    ekran.blit(katman1, (0, 0))
+
+    font = pygame.font.Font(None, 28)
+    if goster:
+        metin = font.render(f"Çokgen alanı : {yuvarla(alan):.2f}", True, beyaz_seffaf)
+        ekran.blit(metin, (20, 50))
+
+    metin2 = font.render(f"Dairenin alanı : {yuvarla(daire_alan)}", True, beyaz_seffaf)
+    metin3 = font.render(f"Daire Pi : {pi:.10f}", True, beyaz_seffaf)
+    metin4 = font.render(f"Çokgen Pi : {pi_cokgen:.10f}" if goster else "", True, beyaz_seffaf)
+    cokgen_metin = font.render(f"Kenar sayısı : {n_kenar}", True, beyaz_seffaf)
+
+    ekran.blit(metin2, (20, 20))
+    ekran.blit(metin3, (850, 20))
+    if goster:
+        ekran.blit(metin4, (850, 50))
+    ekran.blit(cokgen_metin, (20, 80))
+
+def calculate_offset_focus(n_kenar, yaricap_zoom, focus_index=0):
+    # Odaklanacak köşenin koordinatlarını bul
+    koseler = cokgen_koseler(n_kenar, yaricap_zoom)
+    focus_x, focus_y = koseler[focus_index]
+    # Köşenin ekran merkezine göre offsetini negatif olarak al, böylece köşe ekranda merkez olur
+    offset_x = -int(focus_x)
+    offset_y = -int(focus_y)
+    return offset_x, offset_y
+
+while True:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            exit()
+
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            if input_rect.collidepoint(event.pos):
+                input_active = True
+            else:
+                input_active = False
+
+            if button_rect.collidepoint(event.pos):
+                if input_text.strip() != '':
+                    try:
+                        sayi = int(input_text)
+                        if sayi >= 3:
+                            n = sayi
+                            durum_aktifi = True
+                            goster = True
+                        else:
+                            durum_aktifi = False
+                            goster = False
+                    except ValueError:
+                        durum_aktifi = False
+                        goster = False
+
+        elif event.type == pygame.MOUSEWHEEL:
+            if event.y > 0:
+                zoom = min(zoom + 0.1, 5.0)
+            elif event.y < 0:
+                zoom = max(zoom - 0.1, 0.5)
+
+        elif event.type == pygame.KEYDOWN and input_active:
+            if event.key == pygame.K_BACKSPACE:
+                input_text = input_text[:-1]
+            elif event.key == pygame.K_RETURN:
+                if input_text.strip() != '':
+                    try:
+                        sayi = int(input_text)
+                        if sayi >= 3:
+                            n = sayi
+                            durum_aktifi = True
+                            goster = True
+                        else:
+                            durum_aktifi = False
+                            goster = False
+                    except ValueError:
+                        durum_aktifi = False
+                        goster = False
+                input_active = False
+            else:
+                if event.unicode.isdigit():
+                    input_text += event.unicode
+
+    ekran.fill(siyah)
+
+    yaricap_zoom = base_yaricap * zoom
+    alan = alan_formul(n, yaricap_zoom)
+    daire_alan = gercek_daire_alan(yaricap_zoom)
+    # Çokgenün çevresinden pi yaklaşık değeri
+    cokgen_cevre = None
+    pi_cokgen = None
+    if durum_aktifi:
+        koseler = cokgen_koseler(n, yaricap_zoom)
+        dik_kenar = koseler[0][1] - koseler[1][1]
+        yatay_kenar = koseler[0][0] - koseler[1][0]
+        uzunluk = math.sqrt(dik_kenar ** 2 + yatay_kenar ** 2)
+        cokgen_cevre = n * uzunluk
+        pi_cokgen = cokgen_cevre / (2 * yaricap_zoom)
+
+    # Offset hesapla köşe 0 için zoomlanacak
+    if durum_aktifi:
+        offset_x, offset_y = calculate_offset_focus(n, yaricap_zoom, focus_index=0)
+    else:
+        offset_x, offset_y = 0, 0
+
+    draw_shapes(n, yaricap_zoom, offset_x, offset_y, goster, alan, daire_alan, pi_cokgen)
+
+    # Input kısmı ve buton
+    renk = yesil if input_active else beyaz_seffaf
+    pygame.draw.rect(ekran, renk, input_rect, 2)
+    input_surface = pygame.font.Font(None, 28).render(input_text, True, beyaz)
+    ekran.blit(input_surface, (input_rect.x + 5, input_rect.y + 8))
+
+    pygame.draw.rect(ekran, beyaz_seffaf, button_rect, 2)
+    button_text = pygame.font.Font(None, 28).render("Onayla", True, beyaz)
+    btn_rect = button_text.get_rect(center=button_rect.center)
+    ekran.blit(button_text, btn_rect)
+
+    pygame.display.flip()
+    saat.tick(60)
+
